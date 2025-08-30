@@ -1,0 +1,91 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// 1. Konfigurasi Generator dan Datasource
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  admin
+  student
+  instructor
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role     @default(student)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  taughtCourses Course[]     @relation("InstructorCourses")
+  enrollments   Enrollment[]
+
+  @@map("users")
+}
+
+model Course {
+  id           String   @id @default(uuid())
+  title        String
+  description  String?  @db.Text
+  instructorId String   @map("instructor_id")
+  startDate    DateTime @map("start_date")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  instructor  User         @relation("InstructorCourses", fields: [instructorId], references: [id])
+  modules     Module[]
+  enrollments Enrollment[]
+
+  @@map("courses")
+}
+
+model Module {
+  id        String   @id @default(uuid())
+  code      String?
+  title     String
+  content   String?  @db.Text
+  courseId  String   @map("course_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  course Course  @relation(fields: [courseId], references: [id])
+  scores Score[]
+
+  @@map("modules")
+}
+
+model Enrollment {
+  id             String   @id @default(uuid())
+  userId         String   @map("user_id")
+  courseId       String   @map("course_id")
+  enrollmentDate DateTime @default(now()) @map("enrollment_date")
+
+  user   User    @relation(fields: [userId], references: [id])
+  course Course  @relation(fields: [courseId], references: [id])
+  scores Score[]
+
+  @@unique([userId, courseId])
+  @@map("enrollments")
+}
+
+model Score {
+  id           String   @id @default(uuid())
+  score        Decimal
+  enrollmentId String   @map("enrollment_id")
+  moduleId     String   @map("module_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  enrollment Enrollment @relation(fields: [enrollmentId], references: [id])
+  module     Module     @relation(fields: [moduleId], references: [id])
+
+  @@map("scores")
+}
